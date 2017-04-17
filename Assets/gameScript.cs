@@ -235,6 +235,7 @@ public class gameScript : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+        Application.runInBackground = true;
         //TODO: Erstmal nur 10 player erlauben
         playerList = new playerScript[10];
         nextSlot = new uint[10];
