@@ -27,6 +27,7 @@ public class gameScript : MonoBehaviour {
     private playerScript[] playerList;
     private uint[] nextSlot;
     private string outMessage;
+    private string recMessage;
     uint recPlayerPosInList;
 
     public void processMessage(int recConnectionId, string[] message) {
@@ -48,6 +49,8 @@ public class gameScript : MonoBehaviour {
                 //Ein Spieler will eine Chatnachricht verschicken
                 recPlayer = uint.Parse(message[1]);
                 recPlayerPosInList = uint.Parse(message[2]);
+                recMessage = message[3];
+                sendChatMessage(recPlayer, recPlayerPosInList, recMessage);
                 break;
             case Command.Move:
                 //Ein Spieler hat sich bewegt
@@ -77,6 +80,23 @@ public class gameScript : MonoBehaviour {
             default:
                 break;
         }
+    }
+
+    private void sendChatMessage(uint recPlayer, uint recPlayerPosInList, string recMessage)
+    {
+        if (checkIdentity(recPlayer, recPlayerPosInList))
+        {
+            for (uint i = 0; i < playerList.GetLength(0); i++)
+            {
+                if (playerList[i] == null)
+                {
+                    continue;
+                }
+                outMessage = "2;" + recPlayerPosInList + ";" + recMessage;
+                myNetwork.sendMessage(outMessage, playerList[i].getConnectionId());
+            }
+        }
+
     }
 
     public void findLeaver(int recConnectionId)

@@ -91,6 +91,7 @@ public class networkScript : MonoBehaviour
     {
         //Nimmt die Nachricht auseinander und gibt sie an das Spiel
         splitMessage = recMessage.Split(';');
+        Debug.Log("Nachricht kam an und so");
         myGame.processMessage(recConnectionId, splitMessage);
     }
 
