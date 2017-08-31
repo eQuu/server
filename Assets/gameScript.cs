@@ -9,10 +9,18 @@ enum Command : byte
     Chat = 2,
     Move = 3,
     PositionInList = 4,
-    CastAOEStart = 5,
+    CastPointStart = 5,
     CastTargetStart = 6,
-    CastNoTargetStart = 7,
-    CastAOEEnd = 8
+    CastFreeStart = 7,
+    CastPointEnd = 8,
+    CastTargetEnd = 9,
+    CastFreeEnd = 10,
+    DealDamage = 11,
+    DealHeal = 12,
+    OnlineCheck = 13,
+    DrainMana = 14,
+    GiveMana = 15,
+    ChangeTarget = 16,
 };
 
 public class gameScript : MonoBehaviour {
@@ -25,6 +33,7 @@ public class gameScript : MonoBehaviour {
     private float recX, recY, recZ, recRotW, recRotX, recRotY, recRotZ;
     private uint playerCount = 0;
     private playerScript[] playerList;
+    //TODO: private playerScript[] monsterList;
     private uint[] nextSlot;
     private string outMessage;
     private string recMessage;
@@ -68,7 +77,7 @@ public class gameScript : MonoBehaviour {
             case Command.PositionInList:
                 //Wird auch nicht vorkommen
                 break;
-            case Command.CastAOEStart:
+            case Command.CastPointStart:
                 //Jemand sagt uns, dass er einen AOE-Cast startet
                 recPlayer = uint.Parse(message[1]);
                 recPlayerPosInList = uint.Parse(message[2]);
@@ -77,10 +86,48 @@ public class gameScript : MonoBehaviour {
                 recZ = float.Parse(message[5]);
                 checkSpellCast(recPlayer, recPlayerPosInList, recX, recY, recZ);
                 break;
+            case Command.ChangeTarget:
+                //Jemand aendert sein target
+                recPlayer = uint.Parse(message[1]);
+                recPlayerPosInList = uint.Parse(message[2]);
+                recMessage = message[3];
+                changePlayerTarget(recPlayer, recPlayerPosInList, recMessage);
+                break;
             default:
                 break;
         }
     }
+
+    private void changePlayerTarget(uint recPlayer, uint recPlayerPosInList, string target)
+    {
+        if (checkIdentity(recPlayer, recPlayerPosInList))
+        {
+            if (target == "null")
+            {
+                playerList[recPlayerPosInList].setTarget(null);
+                broadcastTargetChange(recPlayerPosInList, "null");
+            } else
+            {
+                uint newTarget = uint.Parse(target);
+                playerList[recPlayerPosInList].setTarget(playerList[newTarget]);
+                broadcastTargetChange(recPlayerPosInList, target);
+            }
+        }
+    }
+
+    private void broadcastTargetChange(uint playerPosInList, string target)
+    {
+        for (uint i = 0; i < playerList.GetLength(0); i++)
+        {
+            if (playerList[i] == null || playerList[i] == playerList[playerPosInList])
+            {
+                continue;
+            }
+            outMessage = "16;" + playerPosInList + ";" + target;
+            myNetwork.sendMessage(outMessage, playerList[i].getConnectionId());
+        }
+    }
+
 
     private void sendChatMessage(uint recPlayer, uint recPlayerPosInList, string recMessage)
     {
@@ -182,11 +229,11 @@ public class gameScript : MonoBehaviour {
             {
                 //Den Anderen sagen, wer der Neue ist
                 outMessage = "1;" + positionToAddTo;
-                Debug.Log("Zeige Spieler " + i + " den neuen Spieler auf " + positionToAddTo);
+                //Debug.Log("Zeige Spieler " + i + " den neuen Spieler auf " + positionToAddTo);
                 myNetwork.sendMessage(outMessage, playerList[i].getConnectionId());
                 //Und dem Neuen diesen Spieler zeigen
                 outMessage = "1;" + playerList[i].getListPos();
-                Debug.Log("Zeige neuem Spieler " + positionToAddTo + " den Spieler auf " + playerList[i].getListPos());
+                //Debug.Log("Zeige neuem Spieler " + positionToAddTo + " den Spieler auf " + playerList[i].getListPos());
                 myNetwork.sendMessage(outMessage, playerList[positionToAddTo].getConnectionId());
             }
         }
@@ -225,7 +272,7 @@ public class gameScript : MonoBehaviour {
 
     private bool checkIdentity(uint recPlayerId, uint posInList)
     {
-        Debug.Log("Position in List: " + posInList);
+        //Debug.Log("Position in List: " + posInList);
         if (playerList[posInList].getPlayerId() == recPlayerId)
         {
             return true;
@@ -244,7 +291,7 @@ public class gameScript : MonoBehaviour {
         }
 
         uint positionToAddTo = nextSlot[playerCount];
-        Debug.Log("Spieler wird geaddet auf: " + positionToAddTo);
+        //Debug.Log("Spieler wird geaddet auf: " + positionToAddTo);
         playerScript playerToAdd = ScriptableObject.CreateInstance<playerScript>();
         playerToAdd.constructNew(newPlayerId, recConnectionId, positionToAddTo, 0f, 0f, 0f);
         playerList[positionToAddTo] = playerToAdd;

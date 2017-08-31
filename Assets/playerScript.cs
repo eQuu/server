@@ -12,6 +12,7 @@ public class playerScript : ScriptableObject {
     private float movespeed;
     private int currentMana, currentHealth;
     private int maximumMana, maximumHealth;
+    private playerScript target = null;
 
     //TODO: Erstmal ohne Rotation
     public void constructNew(uint newId,int recConnectionId, uint positionInList, float newX, float newY, float newZ)
@@ -37,6 +38,11 @@ public class playerScript : ScriptableObject {
 	void Update () {
 	
 	}
+
+    public void setTarget(playerScript newTarget)
+    {
+        this.target = newTarget;
+    }
 
     public uint getPlayerId()
     {
