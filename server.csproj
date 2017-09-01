@@ -78,9 +78,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\gameScript.cs" />
-    <Compile Include="Assets\networkScript.cs" />
-    <Compile Include="Assets\playerScript.cs" />
+    <Compile Include="Assets\Database\Spells\Mage\Cube\Cube.cs" />
+    <Compile Include="Assets\Database\Spells\Mage\Fireblast\Fireblast.cs" />
+    <Compile Include="Assets\Database\Spells\Mage\Heal\Heal.cs" />
+    <Compile Include="Assets\Database\Spells\Mage\Innervate\Innervate.cs" />
+    <Compile Include="Assets\Database\Spells\Spell.cs" />
+    <Compile Include="Assets\Scripts\gameScript.cs" />
+    <Compile Include="Assets\Scripts\networkScript.cs" />
+    <Compile Include="Assets\Scripts\playerScript.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

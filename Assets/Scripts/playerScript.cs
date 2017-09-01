@@ -64,6 +64,11 @@ public class playerScript : ScriptableObject {
         return this.currentMana;
     }
 
+    public int getCurrentHealth()
+    {
+        return this.currentHealth;
+    }
+
     public void reduceRessource(bool isMana, int amount)
     {
         if (isMana)
@@ -79,6 +84,27 @@ public class playerScript : ScriptableObject {
             if (currentHealth < 0)
             {
                 currentHealth = 0;
+            }
+        }
+    }
+
+
+    public void increaseRessource(bool isMana, int amount)
+    {
+        if (isMana)
+        {
+            this.currentMana += amount;
+            if (currentMana > maximumMana)
+            {
+                currentMana = maximumMana;
+            }
+        }
+        else
+        {
+            this.currentHealth += amount;
+            if (currentHealth > maximumHealth)
+            {
+                currentHealth = maximumHealth;
             }
         }
     }

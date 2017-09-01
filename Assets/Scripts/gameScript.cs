@@ -38,6 +38,9 @@ public class gameScript : MonoBehaviour {
     private string outMessage;
     private string recMessage;
     uint recPlayerPosInList;
+    uint recTargetPosInList;
+    uint recSpellPosInList;
+    private Spell[] spellList;
 
     public void processMessage(int recConnectionId, string[] message) {
         recCommand = (Command)byte.Parse(message[0]);
@@ -84,7 +87,16 @@ public class gameScript : MonoBehaviour {
                 recX = float.Parse(message[3]);
                 recY = float.Parse(message[4]);
                 recZ = float.Parse(message[5]);
-                checkSpellCast(recPlayer, recPlayerPosInList, recX, recY, recZ);
+                recSpellPosInList = uint.Parse(message[6]);
+                checkPointSpellCast(recPlayer, recPlayerPosInList, recX, recY, recZ, recSpellPosInList);
+                break;
+            case Command.CastTargetStart:
+                //Jemand sagt uns, dass er einen Target-Cast startet
+                recPlayer = uint.Parse(message[1]);
+                recPlayerPosInList = uint.Parse(message[2]);
+                recTargetPosInList = uint.Parse(message[3]);
+                recSpellPosInList = uint.Parse(message[4]);
+                checkTargetSpellCast(recPlayer, recPlayerPosInList, recTargetPosInList, recSpellPosInList);
                 break;
             case Command.ChangeTarget:
                 //Jemand aendert sein target
@@ -158,21 +170,76 @@ public class gameScript : MonoBehaviour {
         }
     }
 
-    private void checkSpellCast(uint recPlayer, uint recPlayerPosInList, float recX, float recY, float recZ)
+    private void checkPointSpellCast(uint recPlayer, uint recPlayerPosInList, float recX, float recY, float recZ, uint spellID)
     {
         playerScript castingPlayer = playerList[recPlayerPosInList];
         //schauen ob er der ist, fuer den er sich ausgibt
         if (castingPlayer.getPlayerId() == recPlayer)
         {
             //Checken ob er genug Mana hat
-            if (castingPlayer.getCurrentMana() >= 20)
+            if (checkRessource(castingPlayer, spellList[spellID]))
             {
                 //Cast geht durch
-                //Mana reduzieren
-                castingPlayer.reduceRessource(true, 20);
-                broadcastSpellEnd(recPlayerPosInList, recX, recY, recZ);
+                broadcastPointSpellEnd(recPlayerPosInList, recX, recY, recZ, spellID);
             }
         }
+    }
+
+    private void checkTargetSpellCast(uint recPlayer, uint recPlayerPosInList, uint target, uint spellID)
+    {
+        playerScript castingPlayer = playerList[recPlayerPosInList];
+        //schauen ob er der ist, fuer den er sich ausgibt
+        if (castingPlayer.getPlayerId() == recPlayer)
+        {
+            //TODO: Schauen ob das Target valid ist
+            //Checken ob er genug Mana hat
+            if (checkRessource(castingPlayer, spellList[spellID]))
+            {
+                //Cast geht durch
+                wipTargetCast(target, spellID);
+                broadcastTargetSpellEnd(recPlayerPosInList, target, spellID);
+            }
+        }
+    }
+
+    //TODO: Das hier wird zu onCast() vom Spell
+    private void wipTargetCast(uint target, uint spell)
+    {
+        playerScript spellTarget = playerList[target];
+        Spell castedSpell = spellList[spell];
+        switch (spell)
+        {
+            case 1:
+                spellTarget.reduceRessource(false, castedSpell.spellDmg);
+                break;
+            case 2:
+                spellTarget.increaseRessource(false, castedSpell.spellHeal);
+                break;
+            case 3:
+                spellTarget.increaseRessource(true, castedSpell.spellHeal);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private bool checkRessource(playerScript castingPlayer, Spell castedSpell)
+    {
+        int manaCost = castedSpell.spellManacost;
+        int healthCost = castedSpell.spellHPcost;
+        if (castingPlayer.getCurrentMana() >= manaCost && castingPlayer.getCurrentHealth() >= healthCost)
+        {
+            if (castedSpell.spellManacost > 0)
+            {
+                castingPlayer.reduceRessource(true, castedSpell.spellManacost);
+            }
+            if (castedSpell.spellHPcost > 0)
+            {
+                castingPlayer.reduceRessource(false, castedSpell.spellHPcost);
+            }
+            return true;
+        }
+        return false;
     }
 
     private void movePlayer(uint recPlayer, uint recPlayerPosInList, float recX, float recY, float recZ, float recRotW, float recRotX, float recRotY, float recRotZ)
@@ -188,7 +255,7 @@ public class gameScript : MonoBehaviour {
 
     //TODO: Vorher noch den Spellbeginn durchgeben, damit die ihre Animationen und so anpassen
     //TODO: Evtl fuer alle Spells fit machen mit val1, val2 usw. und command anpassbar
-    private void broadcastSpellEnd(uint playerPosInList, float recX, float recY, float recZ)
+    private void broadcastPointSpellEnd(uint playerPosInList, float recX, float recY, float recZ, uint spellID)
     {
         for (uint i = 0; i < playerList.GetLength(0); i++)
         {
@@ -196,7 +263,22 @@ public class gameScript : MonoBehaviour {
             {
                 continue;
             }
-            outMessage = "8;" + playerPosInList + ";" + recX + ";" + (recY + 2f) + ";" + recZ;
+            outMessage = "8;" + playerPosInList + ";" + recX + ";" + (recY + 2f) + ";" + recZ + ";" + spellID;
+            myNetwork.sendMessage(outMessage, playerList[i].getConnectionId());
+        }
+    }
+
+    //TODO: Vorher noch den Spellbeginn durchgeben, damit die ihre Animationen und so anpassen
+    //TODO: Evtl fuer alle Spells fit machen mit val1, val2 usw. und command anpassbar
+    private void broadcastTargetSpellEnd(uint playerPosInList, uint target, uint spellID)
+    {
+        for (uint i = 0; i < playerList.GetLength(0); i++)
+        {
+            if (playerList[i] == null)
+            {
+                continue;
+            }
+            outMessage = "9;" + playerPosInList + ";" + target + ";" + spellID;
             myNetwork.sendMessage(outMessage, playerList[i].getConnectionId());
         }
     }
@@ -307,8 +389,24 @@ public class gameScript : MonoBehaviour {
         playerList = new playerScript[10];
         nextSlot = new uint[10];
         resetNextSlotList();
+
+        //Spells
+        spellList = new Spell[4];
+        Spell newSpell = ScriptableObject.CreateInstance<Cube>();
+        newSpell.initiate();
+        spellList[0] = newSpell;
+        newSpell = ScriptableObject.CreateInstance<Fireblast>();
+        newSpell.initiate();
+        spellList[1] = newSpell;
+        newSpell = ScriptableObject.CreateInstance<Heal>();
+        newSpell.initiate();
+        spellList[2] = newSpell;
+        newSpell = ScriptableObject.CreateInstance<Innervate>();
+        newSpell.initiate();
+        spellList[3] = newSpell;
+
     }
-	
+
     private void resetNextSlotList()
     {
         for (uint i = 0; i < nextSlot.GetLength(0); i++)
